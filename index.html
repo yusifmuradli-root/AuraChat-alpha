@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraChat - Basit Sohbet Uygulaması</title>
+    
+    <!-- Firebase SDK'ları -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 1000px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .chat-container {
+            display: flex;
+            height: 500px;
+        }
+        
+        .users-panel {
+            width: 250px;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .users-panel h3 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .users-list {
+            list-style: none;
+        }
+        
+        .user-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #495057;
+        }
+        
+        .user-item.active {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+        }
+        
+        .user-item .dot {
+            width: 10px;
+            height: 10px;
+            background: #28a745;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .messages-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 15px;
+            max-width: 80%;
+            position: relative;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.system {
+            background: #e9ecef;
+            color: #6c757d;
+            margin-left: auto;
+            margin-right: auto;
+            max-width: 100%;
+            text-align: center;
+            font-style: italic;
+            border-radius: 8px;
+        }
+        
+        .message.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.other {
+            background: white;
+            color: #495057;
+            margin-right: auto;
+            border: 1px solid #dee2e6;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .message-username {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+        
+        .message-content {
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        
+        .input-area {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-area input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .input-area input:focus {
+            border-color: #667eea;
+        }
+        
+        .input-area button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .input-area button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .input-area button:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .login-container {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .login-container h2 {
+            color: #495057;
+            margin-bottom: 30px;
+        }
+        
+        .login-form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .login-form input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .login-form input:focus {
+            border-color: #667eea;
+        }
+        
+        .login-form button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .login-form button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .logout-btn {
+            background: #dc3545;
+            padding: 8px 15px;
+            border-radius: 8px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: #c82333;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .typing-indicator {
+            color: #6c757d;
+            font-style: italic;
+            font-size: 13px;
+            margin-top: 5px;
+            padding: 5px 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c757d;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .empty-state p {
+            margin-top: 15px;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Giriş Ekranı -->
+        <div id="loginScreen" class="login-container">
+            <h2>✨ AuraChat</h2>
+            <p>Basit ve hızlı sohbet platformu</p>
+            <div class="login-form">
+                <input type="text" id="usernameInput" placeholder="Kullanıcı adınızı girin (3-15 karakter)" maxlength="15">
+                <button onclick="login()">Sohbete Başla</button>
+                <p style="margin-top: 15px; font-size: 12px; color: #6c757d;">
+                    Not: Kullanıcı adı sadece harf ve rakam içerebilir
+                </p>
+            </div>
+        </div>
+        
+        <!-- Sohbet Ekranı -->
+        <div id="chatScreen" class="hidden">
+            <div class="header">
+                <h1>💬 AuraChat</h1>
+                <p id="currentUserDisplay">Hoş geldiniz!</p>
+                <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
+            </div>
+            
+            <div class="chat-container">
+                <div class="users-panel">
+                    <h3>👥 Aktif Kullanıcılar (<span id="activeCount">0</span>)</h3>
+                    <ul id="usersList" class="users-list">
+                        <div class="empty-state">
+                            <p>Henüz aktif kullanıcı yok</p>
+                        </div>
+                    </ul>
+                </div>
+                
+                <div class="chat-panel">
+                    <div id="messagesArea" class="messages-area">
+                        <div class="empty-state">
+                            <h3>Hoş geldiniz! 🎉</h3>
+                            <p>İlk mesajı siz gönderin!</p>
+                        </div>
+                    </div>
+                    
+                    <div class="input-area">
+                        <input type="text" id="messageInput" placeholder="Mesajınızı yazın..." onkeypress="handleKeyPress(event)">
+                        <button onclick="sendMessage()" id="sendButton">Gönder</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // XSS Koruması için yardımcı fonksiyon
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+        
+        // Firebase yapılandırması - BURAYA KENDİ BİLGİLERİNİZİ GİRİN
+        const firebaseConfig = {
+  apiKey: "AIzaSyDOjBIYEmA7B7QcBanSL51bpGHPm0ctBQs",
+  authDomain: "aurachat-alpha.firebaseapp.com",
+  projectId: "aurachat-alpha",
+  storageBucket: "aurachat-alpha.firebasestorage.app",
+  messagingSenderId: "966676623990",
+  appId: "1:966676623990:web:1b55771f9353b5fdb72557"
+};
+        
+        // Firebase başlatma
+        try {
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            const auth = firebase.auth();
+            
+            console.log("Firebase başarıyla başlatıldı!");
+        } catch (error) {
+            console.error("Firebase başlatma hatası:", error);
+            alert("Firebase yapılandırması eksik! Lütfen kodu düzenleyin.");
+        }
+        
+        // Global değişkenler
+        let currentUser = null;
+        let messagesRef = null;
+        let usersRef = null;
+        let unsubscribeMessages = null;
+        let unsubscribeUsers = null;
+        
+        // Giriş fonksiyonu
+        async function login() {
+            const usernameInput = document.getElementById('usernameInput').value.trim();
+            
+            // Kullanıcı adı doğrulama
+            if (!usernameInput) {
+                alert("Lütfen kullanıcı adı girin!");
+                return;
+            }
+            
+            if (usernameInput.length < 3 || usernameInput.length > 15) {
+                alert("Kullanıcı adı 3-15 karakter arasında olmalıdır!");
+                return;
+            }
+            
+            if (!/^[a-zA-Z0-9ğüşöçıĞÜŞÖÇİ]+$/.test(usernameInput)) {
+                alert("Kullanıcı adı sadece harf ve rakam içerebilir!");
+                return;
+            }
+            
+            try {
+                // Anonymous auth ile giriş
+                const userCredential = await auth.signInAnonymously();
+                
+                // Kullanıcı bilgilerini kaydet
+                currentUser = {
+                    id: userCredential.user.uid,
+                    username: usernameInput,
+                    joinedAt: new Date()
+                };
+                
+                // Firestore'a kullanıcıyı ekle
+                await db.collection('users').doc(currentUser.id).set({
+                    username: currentUser.username,
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                    online: true
+                });
+                
+                // Firestore referansları
+                messagesRef = db.collection('messages');
+                usersRef = db.collection('users');
+                
+                // Hoş geldin mesajı gönder
+                await messagesRef.add({
+                    username: currentUser.username,
+                    message: `👋 ${currentUser.username} sohbete katıldı!`,
+                    type: 'system',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Mesajları dinle
+                setupMessageListener();
+                
+                // Kullanıcıları dinle
+                setupUsersListener();
+                
+                // Ekranı değiştir
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('chatScreen').classList.remove('hidden');
+                document.getElementById('currentUserDisplay').textContent = `@${currentUser.username}`;
+                
+                // Mesaj inputuna odaklan
+                document.getElementById('messageInput').focus();
+                
+                console.log("Giriş başarılı:", currentUser);
+                
+            } catch (error) {
+                console.error("Giriş hatası:", error);
+                alert("Giriş yapılırken bir hata oluştu: " + error.message);
+            }
+        }
+        
+        // Mesaj gönderme
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message || !currentUser) return;
+            
+            // Mesaj uzunluk kontrolü
+            if (message.length > 500) {
+                alert("Mesaj çok uzun! Maksimum 500 karakter.");
+                return;
+            }
+            
+            try {
+                // Firestore'a mesaj ekle
+                await messagesRef.add({
+                    username: currentUser.username,
+                    message: message,
+                    userId: currentUser.id,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Input'u temizle
+                messageInput.value = '';
+                
+                // Scroll'u en alta al
+                scrollToBottom();
+                
+            } catch (error) {
+                console.error("Mesaj gönderme hatası:", error);
+                alert("Mesaj gönderilirken bir hata oluştu!");
+            }
+        }
+        
+        // Enter tuşu ile gönderme
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        // Mesajları dinleme
+        function setupMessageListener() {
+            if (!messagesRef) return;
+            
+            // Son 50 mesajı getir ve yeni mesajları dinle
+            unsubscribeMessages = messagesRef
+                .orderBy('timestamp', 'desc')
+                .limit(50)
+                .onSnapshot((snapshot) => {
+                    const messagesArea = document.getElementById('messagesArea');
+                    const messages = [];
+                    
+                    snapshot.forEach((doc) => {
+                        messages.push(doc.data());
+                    });
+                    
+                    // Mesajları tarihe göre sırala (eski -> yeni)
+                    messages.reverse();
+                    
+                    // Mesajları göster
+                    displayMessages(messages);
+                });
+        }
+        
+        // Mesajları gösterme
+        function displayMessages(messages) {
+            const messagesArea = document.getElementById('messagesArea');
+            
+            if (messages.length === 0) {
+                messagesArea.innerHTML = `
+                    <div class="empty-state">
+                        <h3>Hoş geldiniz! 🎉</h3>
+                        <p>İlk mesajı siz gönderin!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            messages.forEach((msg) => {
+                const time = msg.timestamp ? formatTimestamp(msg.timestamp) : '';
+                const isCurrentUser = msg.userId === currentUser?.id;
+                
+                if (msg.type === 'system') {
+                    // Sistem mesajı
+                    html += `
+                        <div class="message system">
+                            <div class="message-content">${escapeHtml(msg.message)}</div>
+                        </div>
+                    `;
+                } else {
+                    // Normal mesaj
+                    const messageType = isCurrentUser ? 'user' : 'other';
+                    html += `
+                        <div class="message ${messageType}">
+                            <div class="message-header">
+                                <span class="message-username">${escapeHtml(msg.username)}</span>
+                                <span class="message-time">${time}</span>
+                            </div>
+                            <div class="message-content">${escapeHtml(msg.message)}</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            messagesArea.innerHTML = html;
+            scrollToBottom();
+        }
+        
+        // Kullanıcıları dinleme
+        function setupUsersListener() {
+            if (!usersRef) return;
+            
+            unsubscribeUsers = usersRef
+                .where('online', '==', true)
+                .onSnapshot((snapshot) => {
+                    const users = [];
+                    
+                    snapshot.forEach((doc) => {
+                        users.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    displayUsers(users);
+                });
+        }
+        
+        // Kullanıcıları gösterme
+        function displayUsers(users) {
+            const usersList = document.getElementById('usersList');
+            const activeCount = document.getElementById('activeCount');
+            
+            activeCount.textContent = users.length;
+            
+            if (users.length === 0) {
+                usersList.innerHTML = `
+                    <div class="empty-state">
+                        <p>Henüz aktif kullanıcı yok</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            users.forEach((user) => {
+                const isActive = user.id === currentUser?.id ? 'active' : '';
+                html += `
+                    <li class="user-item ${isActive}">
+                        <span class="dot"></span>
+                        <span>${escapeHtml(user.username)}</span>
+                    </li>
+                `;
+            });
+            
+            usersList.innerHTML = html;
+        }
+        
+        // Zaman formatlama
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return '';
+            
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            const now = new Date();
+            const diffHours = (now - date) / (1000 * 60 * 60);
+            
+            // Bugün ise sadece saat
+            if (diffHours < 24) {
+                return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            // Farklı gün ise tarih + saat
+            return date.toLocaleDateString('tr-TR', { 
+                day: '2-digit', 
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        // Scroll en alta
+        function scrollToBottom() {
+            const messagesArea = document.getElementById('messagesArea');
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+        
+        // Çıkış yapma
+        async function logout() {
+            if (!currentUser) return;
+            
+            try {
+                // Ayrılma mesajı gönder
+                await messagesRef.add({
+                    username: currentUser.username,
+                    message: `👋 ${currentUser.username} sohbetten ayrıldı.`,
+                    type: 'system',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Kullanıcıyı offline yap
+                await db.collection('users').doc(currentUser.id).update({
+                    online: false,
+                    lastActive: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Dinleyicileri durdur
+                if (unsubscribeMessages) unsubscribeMessages();
+                if (unsubscribeUsers) unsubscribeUsers();
+                
+                // Firebase auth çıkış
+                await auth.signOut();
+                
+                // Ekranı değiştir
+                document.getElementById('chatScreen').classList.add('hidden');
+                document.getElementById('loginScreen').classList.remove('hidden');
+                document.getElementById('usernameInput').value = '';
+                
+                currentUser = null;
+                messagesRef = null;
+                usersRef = null;
+                
+                console.log("Çıkış yapıldı");
+                
+            } catch (error) {
+                console.error("Çıkış hatası:", error);
+            }
+        }
+        
+        // Sayfa kapatıldığında temizlik
+        window.addEventListener('beforeunload', async () => {
+            if (currentUser && usersRef) {
+                try {
+                    await db.collection('users').doc(currentUser.id).update({
+                        online: false,
+                        lastActive: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error("Çıkış güncelleme hatası:", error);
+                }
+            }
+        });
+        
+        // Otomatik scroll için observer
+        const messagesArea = document.getElementById('messagesArea');
+        if (messagesArea) {
+            const observer = new MutationObserver(() => {
+                scrollToBottom();
+            });
+            
+            observer.observe(messagesArea, {
+                childList: true,
+                subtree: true
+            });
+        }
+    </script>
+</body>
+</html>

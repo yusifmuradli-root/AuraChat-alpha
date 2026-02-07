@@ -321,6 +321,15 @@
             font-size: 14px;
             opacity: 0.7;
         }
+        
+        .error-banner {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 2px solid #f5c6cb;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -330,7 +339,7 @@
             <h2>✨ AuraChat</h2>
             <p>Basit ve hızlı sohbet platformu</p>
             <div class="login-form">
-                <input type="text" id="usernameInput" placeholder="Kullanıcı adınızı girin (3-15 karakter)" maxlength="15">
+                <input type="text" id="usernameInput" placeholder="Kullanıcı adınızı girin (3-15 karakter)" maxlength="15" autofocus>
                 <button onclick="login()">Sohbete Başla</button>
                 <p style="margin-top: 15px; font-size: 12px; color: #6c757d;">
                     Not: Kullanıcı adı sadece harf ve rakam içerebilir
@@ -387,26 +396,28 @@
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
         
-        // Firebase yapılandırması - BURAYA KENDİ BİLGİLERİNİZİ GİRİN
+        // Firebase yapılandırması - AURAchat-alpha
         const firebaseConfig = {
-  apiKey: "AIzaSyDOjBIYEmA7B7QcBanSL51bpGHPm0ctBQs",
-  authDomain: "aurachat-alpha.firebaseapp.com",
-  projectId: "aurachat-alpha",
-  storageBucket: "aurachat-alpha.firebasestorage.app",
-  messagingSenderId: "966676623990",
-  appId: "1:966676623990:web:1b55771f9353b5fdb72557"
-};
+            apiKey: "AIzaSyDOjBIYEmA7B7QcBanSL51bpGHPm0ctBQs",
+            authDomain: "aurachat-alpha.firebaseapp.com",
+            projectId: "aurachat-alpha",
+            storageBucket: "aurachat-alpha.firebasestorage.app",
+            messagingSenderId: "966676623990",
+            appId: "1:966676623990:web:1b55771f9353b5fdb72557"
+        };
         
         // Firebase başlatma
+        let db, auth;
         try {
+            // Firebase'i başlat
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            const auth = firebase.auth();
+            db = firebase.firestore();
+            auth = firebase.auth();
             
-            console.log("Firebase başarıyla başlatıldı!");
+            console.log("✅ Firebase başarıyla başlatıldı!");
         } catch (error) {
-            console.error("Firebase başlatma hatası:", error);
-            alert("Firebase yapılandırması eksik! Lütfen kodu düzenleyin.");
+            console.error("❌ Firebase başlatma hatası:", error);
+            alert("Firebase başlatılamadı! Lütfen internet bağlantınızı kontrol edin.");
         }
         
         // Global değişkenler
@@ -480,10 +491,10 @@
                 // Mesaj inputuna odaklan
                 document.getElementById('messageInput').focus();
                 
-                console.log("Giriş başarılı:", currentUser);
+                console.log("✅ Giriş başarılı:", currentUser);
                 
             } catch (error) {
-                console.error("Giriş hatası:", error);
+                console.error("❌ Giriş hatası:", error);
                 alert("Giriş yapılırken bir hata oluştu: " + error.message);
             }
         }
@@ -517,7 +528,7 @@
                 scrollToBottom();
                 
             } catch (error) {
-                console.error("Mesaj gönderme hatası:", error);
+                console.error("❌ Mesaj gönderme hatası:", error);
                 alert("Mesaj gönderilirken bir hata oluştu!");
             }
         }
@@ -550,6 +561,9 @@
                     
                     // Mesajları göster
                     displayMessages(messages);
+                }, (error) => {
+                    console.error("Mesaj dinleme hatası:", error);
+                    alert("Mesajlar yüklenirken hata oluştu!");
                 });
         }
         
@@ -616,6 +630,8 @@
                     });
                     
                     displayUsers(users);
+                }, (error) => {
+                    console.error("Kullanıcı dinleme hatası:", error);
                 });
         }
         
@@ -712,10 +728,10 @@
                 messagesRef = null;
                 usersRef = null;
                 
-                console.log("Çıkış yapıldı");
+                console.log("✅ Çıkış yapıldı");
                 
             } catch (error) {
-                console.error("Çıkış hatası:", error);
+                console.error("❌ Çıkış hatası:", error);
             }
         }
         
@@ -734,17 +750,19 @@
         });
         
         // Otomatik scroll için observer
-        const messagesArea = document.getElementById('messagesArea');
-        if (messagesArea) {
-            const observer = new MutationObserver(() => {
-                scrollToBottom();
-            });
-            
-            observer.observe(messagesArea, {
-                childList: true,
-                subtree: true
-            });
-        }
+        setTimeout(() => {
+            const messagesArea = document.getElementById('messagesArea');
+            if (messagesArea) {
+                const observer = new MutationObserver(() => {
+                    scrollToBottom();
+                });
+                
+                observer.observe(messagesArea, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }, 100);
     </script>
 </body>
 </html>
